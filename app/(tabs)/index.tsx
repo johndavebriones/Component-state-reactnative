@@ -18,7 +18,7 @@ export default function App() {
     flashAnim.setValue(1);
     Animated.sequence([
       Animated.timing(flashAnim, { toValue: 1, duration: 50,  useNativeDriver: false }),
-      Animated.timing(flashAnim, { toValue: 0, duration: 300, useNativeDriver: false }),
+      Animated.timing(flashAnim, { toValue: 0, duration: 350, useNativeDriver: false }),
     ]).start();
   };
 

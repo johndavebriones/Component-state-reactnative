@@ -4,6 +4,7 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
+  Animated,
 } from "react-native";
 import { useAudioPlayer } from "expo-audio";
 
@@ -34,7 +35,35 @@ export default function CounterDisplay({
   const holdTimeoutAddRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
   const holdTimeoutMinusRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const HOLD_DELAY = 300; // ms before hold kicks in
+  const shakeAnim     = useRef(new Animated.Value(0)).current;
+  const shakeLoopRef  = useRef<Animated.CompositeAnimation | null>(null);
+
+  const startShake = () => {
+    shakeLoopRef.current?.stop();
+    shakeAnim.setValue(0);
+    shakeLoopRef.current = Animated.loop(
+      Animated.sequence([
+        Animated.timing(shakeAnim, { toValue:  5, duration: 60, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: -5, duration: 60, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue:   8, duration: 50, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue:  -4, duration: 50, useNativeDriver: true }),
+      ])
+    );
+    shakeLoopRef.current.start();
+  };
+
+  const stopShake = () => {
+    shakeLoopRef.current?.stop();
+    shakeLoopRef.current = null;
+    Animated.spring(shakeAnim, {
+      toValue: 0,
+      useNativeDriver: true,
+      tension: 200,
+      friction: 8,
+    }).start();
+  };
+
+  const HOLD_DELAY = 300;
 
   const startPress = (
     action: () => void,
@@ -46,12 +75,10 @@ export default function CounterDisplay({
   ) => {
     isHolding.current = false;
 
-    // tap or Hold action
     tapPlayer.seekTo(0);
     tapPlayer.play();
     action();
 
-    // after HOLD_DELAY, switch to hold mode
     holdTimeoutRef.current = setTimeout(() => {
       isHolding.current = true;
       tapPlayer.pause();
@@ -59,6 +86,8 @@ export default function CounterDisplay({
       holdPlayer.seekTo(0);
       holdPlayer.loop = true;
       holdPlayer.play();
+
+      startShake();
 
       intervalRef.current = setInterval(() => {
         action();
@@ -81,6 +110,7 @@ export default function CounterDisplay({
     if (isHolding.current) {
       holdPlayer.loop = false;
       holdPlayer.pause();
+      stopShake();
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
@@ -105,8 +135,10 @@ export default function CounterDisplay({
 
       <View style={styles.childBody}>
 
-        <Text style={styles.countDisplay}>{count}</Text>
-
+        <Animated.Text style={[styles.countDisplay, { transform: [{ translateX: shakeAnim }] }]}>
+          {count}
+        </Animated.Text>
+        {/* Dito nakalagay ang add and minus buttons */}
         <TouchableOpacity
           style={[styles.btn, { backgroundColor: "#99BC85" }]}
           onPressIn={() => startPress(onAdd, addPlayer, addHoldPlayer, isHoldingAdd, addIntervalRef, holdTimeoutAddRef)}
