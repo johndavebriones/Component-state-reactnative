@@ -13,6 +13,7 @@ type CounterDisplayProps = {
   onAdd: () => void;
   onMinus: () => void;
   onReset: () => void;
+  onResetAnimation: (index: number) => void; // 👈 new
 };
 
 export default function CounterDisplay({
@@ -20,13 +21,20 @@ export default function CounterDisplay({
   onAdd,
   onMinus,
   onReset,
+  onResetAnimation, // 👈 new
 }: CounterDisplayProps) {
 
   const addPlayer       = useAudioPlayer(require("@/assets/sounds/Pikmin.mp3"));
   const minusPlayer     = useAudioPlayer(require("@/assets/sounds/Pikmin.mp3"));
-  const resetPlayer     = useAudioPlayer(require("@/assets/sounds/ReturnByDeath.mp3"));
   const addHoldPlayer   = useAudioPlayer(require("@/assets/sounds/gangnam.mp3"));
-  const minusHoldPlayer = useAudioPlayer(require("@/assets/sounds/gangnam.mp3"));
+  const minusHoldPlayer = useAudioPlayer(require("@/assets/sounds/gangnam (mp3cut.net).mp3"));
+
+  const resetPlayers = [
+    useAudioPlayer(require("@/assets/sounds/ReturnByDeath.mp3")),
+    useAudioPlayer(require("@/assets/sounds/ms xp startup.mp3")),
+    useAudioPlayer(require("@/assets/sounds/Gay Echo sound effect.mp3")),
+    useAudioPlayer(require("@/assets/sounds/HKSFX.mp3")),
+  ];
 
   const addIntervalRef    = useRef<ReturnType<typeof setInterval> | null>(null);
   const minusIntervalRef  = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -74,7 +82,6 @@ export default function CounterDisplay({
     holdTimeoutRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>
   ) => {
     isHolding.current = false;
-
     tapPlayer.seekTo(0);
     tapPlayer.play();
     action();
@@ -82,13 +89,10 @@ export default function CounterDisplay({
     holdTimeoutRef.current = setTimeout(() => {
       isHolding.current = true;
       tapPlayer.pause();
-
       holdPlayer.seekTo(0);
       holdPlayer.loop = true;
       holdPlayer.play();
-
       startShake();
-
       intervalRef.current = setInterval(() => {
         action();
       }, 150);
@@ -121,8 +125,10 @@ export default function CounterDisplay({
   };
 
   const handleReset = () => {
-    resetPlayer.seekTo(0);
-    resetPlayer.play();
+    const index = Math.floor(Math.random() * resetPlayers.length);
+    resetPlayers[index].seekTo(0);
+    resetPlayers[index].play();
+    onResetAnimation(index); // 👈 fire matching animation
     onReset();
   };
 
@@ -138,7 +144,7 @@ export default function CounterDisplay({
         <Animated.Text style={[styles.countDisplay, { transform: [{ translateX: shakeAnim }] }]}>
           {count}
         </Animated.Text>
-        {/* Dito nakalagay ang add and minus buttons */}
+
         <TouchableOpacity
           style={[styles.btn, { backgroundColor: "#99BC85" }]}
           onPressIn={() => startPress(onAdd, addPlayer, addHoldPlayer, isHoldingAdd, addIntervalRef, holdTimeoutAddRef)}
