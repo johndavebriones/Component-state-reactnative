@@ -1,0 +1,183 @@
+import React, { useRef } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+} from "react-native";
+import { useAudioPlayer } from "expo-audio";
+
+type CounterDisplayProps = {
+  count: number;
+  onAdd: () => void;
+  onMinus: () => void;
+  onReset: () => void;
+};
+
+export default function CounterDisplay({
+  count,
+  onAdd,
+  onMinus,
+  onReset,
+}: CounterDisplayProps) {
+
+  const addPlayer       = useAudioPlayer(require("@/assets/sounds/Pikmin.mp3"));
+  const minusPlayer     = useAudioPlayer(require("@/assets/sounds/Pikmin.mp3"));
+  const resetPlayer     = useAudioPlayer(require("@/assets/sounds/ReturnByDeath.mp3"));
+  const addHoldPlayer   = useAudioPlayer(require("@/assets/sounds/gangnam.mp3"));
+  const minusHoldPlayer = useAudioPlayer(require("@/assets/sounds/gangnam.mp3"));
+
+  const addIntervalRef    = useRef<ReturnType<typeof setInterval> | null>(null);
+  const minusIntervalRef  = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isHoldingAdd      = useRef(false);
+  const isHoldingMinus    = useRef(false);
+  const holdTimeoutAddRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const holdTimeoutMinusRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const HOLD_DELAY = 300; // ms before hold kicks in
+
+  const startPress = (
+    action: () => void,
+    tapPlayer: ReturnType<typeof useAudioPlayer>,
+    holdPlayer: ReturnType<typeof useAudioPlayer>,
+    isHolding: React.MutableRefObject<boolean>,
+    intervalRef: React.MutableRefObject<ReturnType<typeof setInterval> | null>,
+    holdTimeoutRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>
+  ) => {
+    isHolding.current = false;
+
+    // tap or Hold action
+    tapPlayer.seekTo(0);
+    tapPlayer.play();
+    action();
+
+    // after HOLD_DELAY, switch to hold mode
+    holdTimeoutRef.current = setTimeout(() => {
+      isHolding.current = true;
+      tapPlayer.pause();
+
+      holdPlayer.seekTo(0);
+      holdPlayer.loop = true;
+      holdPlayer.play();
+
+      intervalRef.current = setInterval(() => {
+        action();
+      }, 150);
+    }, HOLD_DELAY);
+  };
+
+  const endPress = (
+    tapPlayer: ReturnType<typeof useAudioPlayer>,
+    holdPlayer: ReturnType<typeof useAudioPlayer>,
+    isHolding: React.MutableRefObject<boolean>,
+    intervalRef: React.MutableRefObject<ReturnType<typeof setInterval> | null>,
+    holdTimeoutRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>
+  ) => {
+    if (holdTimeoutRef.current) {
+      clearTimeout(holdTimeoutRef.current);
+      holdTimeoutRef.current = null;
+    }
+
+    if (isHolding.current) {
+      holdPlayer.loop = false;
+      holdPlayer.pause();
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    }
+
+    isHolding.current = false;
+  };
+
+  const handleReset = () => {
+    resetPlayer.seekTo(0);
+    resetPlayer.play();
+    onReset();
+  };
+
+  return (
+    <View style={styles.childWrapper}>
+
+      <View style={styles.childLabel}>
+        <Text style={styles.childLabelText}>COUNTER DISPLAY</Text>
+      </View>
+
+      <View style={styles.childBody}>
+
+        <Text style={styles.countDisplay}>{count}</Text>
+
+        <TouchableOpacity
+          style={[styles.btn, { backgroundColor: "#99BC85" }]}
+          onPressIn={() => startPress(onAdd, addPlayer, addHoldPlayer, isHoldingAdd, addIntervalRef, holdTimeoutAddRef)}
+          onPressOut={() => endPress(addPlayer, addHoldPlayer, isHoldingAdd, addIntervalRef, holdTimeoutAddRef)}
+        >
+          <Text style={styles.btnText}>Add Count</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.btn, { backgroundColor: "#BFD8AF" }]}
+          onPressIn={() => startPress(onMinus, minusPlayer, minusHoldPlayer, isHoldingMinus, minusIntervalRef, holdTimeoutMinusRef)}
+          onPressOut={() => endPress(minusPlayer, minusHoldPlayer, isHoldingMinus, minusIntervalRef, holdTimeoutMinusRef)}
+        >
+          <Text style={styles.btnText}>Minus Count</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.btn, { backgroundColor: "rgb(158, 206, 131)" }]}
+          onPress={handleReset}
+        >
+          <Text style={styles.btnText}>Reset Count</Text>
+        </TouchableOpacity>
+
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  childWrapper: {
+    borderWidth: 3,
+    borderColor: "#99BC85",
+    borderRadius: 14,
+    overflow: "hidden",
+    width: "100%",
+  },
+  childLabel: {
+    backgroundColor: "#BFD8AF",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    alignItems: "center",
+  },
+  childLabelText: {
+    color: "#111",
+    fontWeight: "bold",
+    fontSize: 13,
+    letterSpacing: 0.4,
+  },
+  childBody: {
+    paddingTop: 18,
+    paddingBottom: 20,
+    paddingHorizontal: 16,
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+  },
+  countDisplay: {
+    fontSize: 72,
+    fontWeight: "bold",
+    color: "#111",
+    marginBottom: 10,
+  },
+  btn: {
+    width: "100%",
+    paddingVertical: 14,
+    borderRadius: 50,
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  btnText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+});
