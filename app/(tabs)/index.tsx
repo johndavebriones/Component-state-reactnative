@@ -247,4 +247,4 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     zIndex: 999,
   },
-});
+});``
